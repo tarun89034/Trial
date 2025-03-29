@@ -1,0 +1,60 @@
+import com.mongodb.MongoClient;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
+import org.mindrot.jbcrypt.BCrypt;
+import java.util.Scanner;
+
+public class LoginSystem {
+    public static void main(String[] args) {
+        try (MongoClient mongoClient = new MongoClient("localhost", 27017);
+             Scanner scanner = new Scanner(System.in)) {
+            
+            MongoDatabase database = mongoClient.getDatabase("UserDB");
+            MongoCollection<Document> collection = database.getCollection("users");
+
+            System.out.println("1. Register\n2. Login");
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            if (choice == 1) {
+                System.out.print("Enter Username: ");
+                String username = scanner.nextLine();
+                System.out.print("Enter Password: ");
+                String password = scanner.nextLine();
+
+                // Hash the password before storing
+                String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
+                Document user = new Document("username", username)
+                        .append("password", hashedPassword);
+                collection.insertOne(user);
+                System.out.println("Registration Successful!");
+
+            } else if (choice == 2) {
+                System.out.print("Enter Username: ");
+                String username = scanner.nextLine();
+                System.out.print("Enter Password: ");
+                String password = scanner.nextLine();
+
+                Document query = new Document("username", username);
+                Document result = collection.find(query).first();
+
+                if (result != null) {
+                    String storedHashedPassword = result.getString("password");
+
+                    // Check hashed password
+                    if (BCrypt.checkpw(password, storedHashedPassword)) {
+                        System.out.println("Login Successful!");
+                    } else {
+                        System.out.println("Invalid Credentials");
+                    }
+                } else {
+                    System.out.println("Invalid Credentials");
+                }
+            } else {
+                System.out.println("Invalid choice!");
+            }
+        }
+    }
+}
